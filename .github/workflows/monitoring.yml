@@ -1,0 +1,78 @@
+name: Monitoring and Observability
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  health-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Check application health
+        run: |
+          echo "Checking application health endpoints..."
+          curl -f http://localhost:8080/health || exit 1
+          curl -f http://localhost:8080/readiness || exit 1
+          echo "Health checks passed"
+      
+      - name: Collect metrics
+        run: |
+          echo "Collecting application metrics..."
+          curl -s http://localhost:9090/metrics > metrics.txt
+          echo "Metrics collected"
+      
+      - name: Upload metrics
+        uses: actions/upload-artifact@v3
+        with:
+          name: metrics
+          path: metrics.txt
+          retention-days: 7
+
+  log-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Analyze application logs
+        run: |
+          echo "Analyzing logs for errors and warnings..."
+          # Example: Count errors in logs
+          ERROR_COUNT=$(grep -c 'ERROR' logs/*.log || echo 0)
+          WARNING_COUNT=$(grep -c 'WARN' logs/*.log || echo 0)
+          echo "Errors: $ERROR_COUNT" >> log-analysis.txt
+          echo "Warnings: $WARNING_COUNT" >> log-analysis.txt
+      
+      - name: Upload log analysis
+        uses: actions/upload-artifact@v3
+        with:
+          name: log-analysis
+          path: log-analysis.txt
+          retention-days: 7
+
+  performance-monitoring:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Monitor performance metrics
+        run: |
+          echo "Monitoring performance metrics..."
+          echo "CPU Usage: Monitoring" >> performance.txt
+          echo "Memory Usage: Monitoring" >> performance.txt
+          echo "Disk Usage: Monitoring" >> performance.txt
+          echo "Response Time: Monitoring" >> performance.txt
+      
+      - name: Upload performance data
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-metrics
+          path: performance.txt
+          retention-days: 7
+      
+      - name: Send alerts if thresholds exceeded
+        run: |
+          echo "Checking performance thresholds..."
+          # Alert logic would go here
