@@ -1,0 +1,52 @@
+# Docker Registry Configuration for Audityzer
+# This file contains the registry configuration for pushing and pulling Docker images
+
+registries:
+  - name: Docker Hub
+    url: https://registry.hub.docker.com
+    username: ${DOCKER_USERNAME}
+    password: ${DOCKER_PASSWORD}
+    email: ${DOCKER_EMAIL}
+    auth: ${DOCKER_AUTH}
+    
+  - name: GitHub Container Registry
+    url: https://ghcr.io
+    username: romanchaa997
+    password: ${GITHUB_TOKEN}
+    email: romanchaa997@gmail.com
+    
+  - name: Private Registry
+    url: https://registry.audityzer.com
+    username: ${REGISTRY_USERNAME}
+    password: ${REGISTRY_PASSWORD}
+    email: ${REGISTRY_EMAIL}
+    ca_cert: /etc/docker/certs.d/registry.audityzer.com/ca.crt
+    client_cert: /etc/docker/certs.d/registry.audityzer.com/client.cert
+    client_key: /etc/docker/certs.d/registry.audityzer.com/client.key
+
+image_settings:
+  default_registry: ghcr.io
+  image_prefix: audityzer
+  image_tag_latest: latest
+  image_tag_version: ${VERSION}
+  push_on_build: true
+  pull_always: false
+  
+build_context:
+  dockerfile: Dockerfile
+  build_args:
+    - BUILD_DATE=${BUILD_DATE}
+    - VERSION=${VERSION}
+    - VCS_REF=${VCS_REF}
+  
+image_scanning:
+  enabled: true
+  scanner: trivy
+  severity_threshold: HIGH
+  
+multi_arch:
+  platforms:
+    - linux/amd64
+    - linux/arm64
+    - linux/arm/v7
+  build_strategy: buildx
