@@ -1,0 +1,62 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          docker build -t audityzer:staging .
+          # Deploy to staging cluster
+          
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          curl -f http://localhost/health || exit 1
+          
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production..."
+          docker build -t audityzer:latest .
+          # Deploy to production cluster
+          
+      - name: Update deployment status
+        if: always()
+        run: |
+          echo "Deployment completed with status: ${{ job.status }}"
+          
+      - name: Create deployment record
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              environment: 'production',
+              required_contexts: [],
+              auto_merge: false
+            })
+      
+      - name: Upload deployment logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-logs
+          path: deployment.log
+          retention-days: 30
