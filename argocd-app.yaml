@@ -1,0 +1,75 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: audityzer-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/romanchaa997/audityzer-ci-cd-templates.git
+    targetRevision: main
+    path: .
+    helm:
+      releaseName: audityzer
+      values: |
+        replicaCount: 3
+        image:
+          tag: "1.0.0"
+        ingress:
+          enabled: true
+          hosts:
+            - host: audityzer.example.com
+              paths:
+                - path: /
+                  pathType: Prefix
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: audityzer-prod
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  info:
+  - name: Documentation
+    value: https://github.com/romanchaa997/audityzer-ci-cd-templates
+  - name: CI/CD Pipeline
+    value: https://github.com/romanchaa997/audityzer-ci-cd-templates/actions
+  - name: Repository
+    value: https://github.com/romanchaa997/audityzer-ci-cd-templates
+  
+  revision: main
+  
+  status:
+    operationState:
+      phase: Succeeded
+    resources:
+    - group: apps
+      kind: Deployment
+      name: audityzer-api
+      namespace: audityzer-prod
+      status: Synced
+    - group: v1
+      kind: Service
+      name: audityzer-api
+      namespace: audityzer-prod
+      status: Synced
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      name: audityzer-api-hpa
+      namespace: audityzer-prod
+      status: Synced
