@@ -3,7 +3,15 @@ name: Deploy to Production
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/deploy.yml'
+      - 'src/**'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -12,34 +20,62 @@ jobs:
       contents: read
       deployments: write
     
+    strategy:
+      fail-fast: true
+    
     steps:
       - uses: actions/checkout@v3
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+        with:
+          driver-options: |
+            image=moby/buildkit:v0.12.0
+      
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: false
+          tags: audityzer:staging
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+      
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
       
       - name: Deploy to staging
         run: |
           echo "Deploying to staging environment..."
           docker build -t audityzer:staging .
           # Deploy to staging cluster
-          
+      
       - name: Run smoke tests
         run: |
           echo "Running smoke tests..."
           curl -f http://localhost/health || exit 1
-          
+      
       - name: Deploy to production
         run: |
           echo "Deploying to production..."
           docker build -t audityzer:latest .
           # Deploy to production cluster
-          
+      
       - name: Update deployment status
         if: always()
         run: |
           echo "Deployment completed with status: ${{ job.status }}"
-          
+      
       - name: Create deployment record
         uses: actions/github-script@v6
         with:
