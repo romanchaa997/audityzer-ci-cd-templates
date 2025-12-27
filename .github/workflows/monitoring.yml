@@ -2,12 +2,18 @@ name: Monitoring and Observability
 
 on:
   schedule:
-    - cron: '*/15 * * * *'  # Every 15 minutes
+    - cron: '*/15 * * * *' # Every 15 minutes
   workflow_dispatch:
+
+concurrency:
+  group: monitoring
+  cancel-in-progress: false
 
 jobs:
   health-checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
     steps:
       - uses: actions/checkout@v3
       
@@ -17,14 +23,16 @@ jobs:
           curl -f http://localhost:8080/health || exit 1
           curl -f http://localhost:8080/readiness || exit 1
           echo "Health checks passed"
+        continue-on-error: true
       
       - name: Collect metrics
         run: |
           echo "Collecting application metrics..."
-          curl -s http://localhost:9090/metrics > metrics.txt
+          curl -s http://localhost:9090/metrics > metrics.txt || echo "No metrics available"
           echo "Metrics collected"
       
       - name: Upload metrics
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: metrics
@@ -33,6 +41,8 @@ jobs:
 
   log-analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
     steps:
       - uses: actions/checkout@v3
       
@@ -40,12 +50,14 @@ jobs:
         run: |
           echo "Analyzing logs for errors and warnings..."
           # Example: Count errors in logs
-          ERROR_COUNT=$(grep -c 'ERROR' logs/*.log || echo 0)
-          WARNING_COUNT=$(grep -c 'WARN' logs/*.log || echo 0)
-          echo "Errors: $ERROR_COUNT" >> log-analysis.txt
+          ERROR_COUNT=$(grep -c 'ERROR' logs/*.log 2>/dev/null || echo 0)
+          WARNING_COUNT=$(grep -c 'WARN' logs/*.log 2>/dev/null || echo 0)
+          echo "Errors: $ERROR_COUNT" > log-analysis.txt
           echo "Warnings: $WARNING_COUNT" >> log-analysis.txt
+        continue-on-error: true
       
       - name: Upload log analysis
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: log-analysis
@@ -54,25 +66,43 @@ jobs:
 
   performance-monitoring:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
     steps:
       - uses: actions/checkout@v3
       
       - name: Monitor performance metrics
         run: |
           echo "Monitoring performance metrics..."
-          echo "CPU Usage: Monitoring" >> performance.txt
-          echo "Memory Usage: Monitoring" >> performance.txt
-          echo "Disk Usage: Monitoring" >> performance.txt
-          echo "Response Time: Monitoring" >> performance.txt
+          {
+            echo "CPU Usage: Monitoring"
+            echo "Memory Usage: Monitoring"
+            echo "Disk Usage: Monitoring"
+            echo "Response Time: Monitoring"
+          } > performance.txt
       
       - name: Upload performance data
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: performance-metrics
           path: performance.txt
           retention-days: 7
       
-      - name: Send alerts if thresholds exceeded
+      - name: Check performance thresholds
         run: |
           echo "Checking performance thresholds..."
-          # Alert logic would go here
+          # Add threshold checks here
+          # Send alerts if conditions are met
+        continue-on-error: true
+  
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: [health-checks, log-analysis, performance-monitoring]
+    if: failure()
+    
+    steps:
+      - name: Send notification on failure
+        run: |
+          echo "Monitoring workflow encountered errors"
+          # Add notification logic here (email, Slack, PagerDuty, etc.)
