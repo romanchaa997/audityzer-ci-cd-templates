@@ -29,10 +29,10 @@ jobs:
     timeout-minutes: 15
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Cache Trivy database
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
           key: trivy-cache-${{ runner.os }}-${{ github.run_id }}
@@ -52,7 +52,7 @@ jobs:
       - name: Upload Trivy results
         if: always()
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
           category: 'trivy'
@@ -66,7 +66,7 @@ jobs:
     timeout-minutes: 15
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Run Snyk security scan
         continue-on-error: true
@@ -87,10 +87,10 @@ jobs:
     timeout-minutes: 20
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Cache Dependency-Check database
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: dependency-check-${{ runner.os }}-${{ github.run_id }}
@@ -111,7 +111,7 @@ jobs:
       - name: Upload Dependency-Check results
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
           path: reports/
@@ -124,7 +124,7 @@ jobs:
     if: always()
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Create comprehensive security report
         run: |
@@ -138,7 +138,7 @@ jobs:
       
       - name: Upload security report
         continue-on-error: true
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-report
           path: security-report.txt
