@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 10
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Check application health
         continue-on-error: true
@@ -35,7 +35,7 @@ jobs:
       - name: Upload metrics
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: metrics
           path: metrics.txt
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 10
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Analyze application logs
         continue-on-error: true
@@ -60,7 +60,7 @@ jobs:
       - name: Upload log analysis
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: log-analysis
           path: log-analysis.txt
@@ -71,7 +71,7 @@ jobs:
     timeout-minutes: 10
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Monitor performance metrics
         continue-on-error: true
@@ -85,7 +85,7 @@ jobs:
       - name: Upload performance data
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-metrics
           path: performance.txt
