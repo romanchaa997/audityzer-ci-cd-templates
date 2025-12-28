@@ -1,0 +1,77 @@
+name: Security Scan Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      scan-type:
+        required: false
+        default: 'all'
+        type: string
+        description: 'Type of security scan: trivy, snyk, dependency-check, or all'
+
+jobs:
+  trivy-scan:
+    if: ${{ inputs.scan-type == 'trivy' || inputs.scan-type == 'all' }}
+    name: Trivy File System Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    timeout-minutes: 15
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Cache Trivy database
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: trivy-${{ runner.os }}-
+      
+      - name: Run Trivy scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Trivy results
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy'
+
+  dependency-check:
+    if: ${{ inputs.scan-type == 'dependency-check' || inputs.scan-type == 'all' }}
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    timeout-minutes: 20
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Dependency-Check
+        continue-on-error: true
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'audityzer'
+          path: '.'
+          format: 'JSON'
+      
+      - name: Upload results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports/
+          retention-days: 30
